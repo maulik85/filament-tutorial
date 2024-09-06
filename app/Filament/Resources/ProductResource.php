@@ -47,9 +47,10 @@ class ProductResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')
+                Tables\Columns\TextInputColumn::make('name')
                     ->sortable()
-                    ->searchable(isIndividual: true, isGlobal: false),
+                    ->searchable(isIndividual: true, isGlobal: false)
+                    ->rules(['required', 'min:3']),
                 Tables\Columns\TextColumn::make('price')
                     ->sortable()
                     ->money('usd')
@@ -57,15 +58,11 @@ class ProductResource extends Resource
                         return $record->price / 100;
                     })
                     ->alignEnd(),
+                Tables\Columns\CheckboxColumn::make('is_active'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->since(),
-                Tables\Columns\TextColumn::make('status')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'in stock' => 'primary',
-                        'sold out' => 'danger',
-                        'coming soon' => 'info',
-                    }),
+                Tables\Columns\SelectColumn::make('status')
+                    ->options(self::$statuses),
                 Tables\Columns\TextColumn::make('category.name')
                     ->url(function (Product $product): string {
                         return CategoryResource::getUrl('index', [

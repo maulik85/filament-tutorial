@@ -1,0 +1,96 @@
+<?php
+
+namespace App\Filament\Resources;
+
+use App\Filament\Resources\ProductResource\Pages;
+use App\Filament\Resources\ProductResource\RelationManagers;
+use App\Models\Product;
+use Filament\Actions\DeleteAction;
+use Filament\Forms;
+use Filament\Forms\Form;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+use function Laravel\Prompts\select;
+
+class ProductResource extends Resource
+{
+    protected static ?string $model = Product::class;
+
+    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+
+    protected static array $statuses = [
+        'in stock' => 'in stock',
+        'sold out' => 'sold out',
+        'coming soon' => 'coming soon',
+    ];
+
+    public static function form(Form $form): Form
+    {
+        return $form
+            ->schema([
+                Forms\Components\TextInput::make('name')
+                    ->required()
+                    ->unique(ignoreRecord: true),
+                Forms\Components\TextInput::make('price')
+                    ->required(),
+                Forms\Components\Radio::make('status')
+                ->options(self::$statuses),
+                Forms\Components\Select::make('category_id')
+                ->relationship('category', 'name')
+            ]);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                Tables\Columns\TextColumn::make('name')
+                    ->sortable()
+                    ->searchable(isIndividual: true, isGlobal: false),
+                Tables\Columns\TextColumn::make('price')
+                    ->sortable()
+                    ->money('usd')
+                    ->getStateUsing(function (Product $record): float {
+                        return $record->price / 100;
+                    }),
+                Tables\Columns\TextColumn::make('status'),
+                Tables\Columns\TextColumn::make('category.name'),
+                Tables\Columns\TextColumn::make('tags.name'),
+            ])
+            ->defaultSort('price', 'desc')
+            ->filters([
+                Tables\Filters\SelectFilter::make('status')
+                    ->options(self::$statuses),
+                Tables\Filters\SelectFilter::make('category')
+                    ->relationship('category', 'name'),
+            ])
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
+            ]);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            RelationManagers\TagsRelationManager::class,
+        ];
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => Pages\ListProducts::route('/'),
+            'create' => Pages\CreateProduct::route('/create'),
+            'edit' => Pages\EditProduct::route('/{record}/edit'),
+        ];
+    }
+}

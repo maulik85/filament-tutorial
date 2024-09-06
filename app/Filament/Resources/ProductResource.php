@@ -55,10 +55,25 @@ class ProductResource extends Resource
                     ->money('usd')
                     ->getStateUsing(function (Product $record): float {
                         return $record->price / 100;
+                    })
+                    ->alignEnd(),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->since(),
+                Tables\Columns\TextColumn::make('status')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'in stock' => 'primary',
+                        'sold out' => 'danger',
+                        'coming soon' => 'info',
                     }),
-                Tables\Columns\TextColumn::make('status'),
-                Tables\Columns\TextColumn::make('category.name'),
-                Tables\Columns\TextColumn::make('tags.name'),
+                Tables\Columns\TextColumn::make('category.name')
+                    ->url(function (Product $product): string {
+                        return CategoryResource::getUrl('index', [
+                            'record' => $product->category_id
+                        ]);
+                    }),
+                Tables\Columns\TextColumn::make('tags.name')
+                    ->badge(),
             ])
             ->defaultSort('price', 'desc')
             ->filters([
